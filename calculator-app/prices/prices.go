@@ -1,6 +1,7 @@
 package prices
 
 import (
+	"errors"
 	"example/calculator/conversion"
 	"example/calculator/iomanager"
 	"fmt"
@@ -13,11 +14,12 @@ type TaxIncludedPriceJob struct {
 	IOFileManager     iomanager.IOManager `json:"-"`
 }
 
-func (job *TaxIncludedPriceJob) Process() error {
+func (job *TaxIncludedPriceJob) Process(doneChan chan<- bool, errorChan chan error) {
 	err := job.LoadData()
-
+	errorChan <- errors.New("Error!")
 	if err != nil {
-		return err
+		errorChan <- err
+		return
 	}
 
 	result := make(map[string]string)
@@ -27,7 +29,9 @@ func (job *TaxIncludedPriceJob) Process() error {
 		result[fmt.Sprintf("%.2f", price)] = fmt.Sprintf("%.2f", taxIncludedPrice)
 	}
 	job.TaxIncludedPrices = result
-	return job.IOFileManager.WriteJSONToFile(job)
+	job.IOFileManager.WriteJSONToFile(job)
+
+	doneChan <- true
 }
 
 func (job *TaxIncludedPriceJob) LoadData() error {
