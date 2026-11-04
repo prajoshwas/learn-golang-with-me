@@ -13,6 +13,7 @@ func RegisterRoutes(router *gin.Engine) {
 	router.GET("events/:id", getEvent)
 	router.POST("events", createEvent)
 	router.PUT("events/:id", updateEvent)
+	router.DELETE("events/:id", deleteEvent)
 }
 
 func getEvents(context *gin.Context) {
@@ -77,6 +78,39 @@ func createEvent(context *gin.Context) {
 
 }
 
+func deleteEvent(context *gin.Context) {
+	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "Could not parse event id.",
+			"code":    "REAPI400",
+		})
+		return
+	}
+
+	_, err = models.GetEventByID(eventId)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Unable to retrieve event by Id",
+			"code":    "REAPI500",
+		})
+		return
+	}
+
+	err = models.DeleteEvent(eventId)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not delete event.",
+			"code":    "REAPI500",
+		})
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H{
+		"message": "Event deleted successfully",
+	})
+}
+
 func updateEvent(context *gin.Context) {
 
 	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
@@ -109,7 +143,7 @@ func updateEvent(context *gin.Context) {
 
 	updatedEvent.ID = eventId
 
-	_, err = models.UpdateEvent(&updatedEvent)
+	err = models.UpdateEvent(&updatedEvent)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Could not update event.",

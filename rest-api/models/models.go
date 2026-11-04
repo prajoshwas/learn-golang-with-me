@@ -84,27 +84,35 @@ func (e *Event) Save() error {
 	return nil
 }
 
-func UpdateEvent(event *Event) (int64, error) {
+func DeleteEvent(id int64) error {
+	query := `DELETE FROM events WHERE id = ?`
+	stmt, err := db.DB.Prepare(query)
+
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(id)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func UpdateEvent(event *Event) error {
 	query := `UPDATE events SET name = ?, description = ?, location = ?, dateTime = ? WHERE id = ?`
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer stmt.Close()
 
-	result, err := stmt.Exec(event.Name, event.Description, event.Location, event.DateTime, event.ID)
+	_, err = stmt.Exec(event.Name, event.Description, event.Location, event.DateTime, event.ID)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-
-	if rowsAffected == 0 {
-		return 0, err
-	}
-
-	return rowsAffected, nil
+	return nil
 }
