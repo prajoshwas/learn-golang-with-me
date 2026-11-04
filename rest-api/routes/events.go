@@ -1,20 +1,15 @@
 package routes
 
 import (
+	"errors"
 	"example/rest-api/models"
+	"example/rest-api/utils"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
-
-func RegisterRoutes(router *gin.Engine) {
-	router.GET("events", getEvents)
-	router.GET("events/:id", getEvent)
-	router.POST("events", createEvent)
-	router.PUT("events/:id", updateEvent)
-	router.DELETE("events/:id", deleteEvent)
-}
 
 func getEvents(context *gin.Context) {
 	es, err := models.GetAllEvents()
@@ -51,8 +46,21 @@ func getEvent(context *gin.Context) {
 }
 
 func createEvent(context *gin.Context) {
+
+	token := context.Request.Header.Get("Authorization")
+
+	userId, err := validateJWT(token)
+
+	if err != nil {
+		context.JSON(http.StatusUnauthorized, gin.H{
+			"message": err.Error(),
+			"code":    "REAPI401",
+		})
+		return
+	}
+
 	var event models.Event
-	err := context.ShouldBindJSON(&event)
+	err = context.ShouldBindJSON(&event)
 
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
@@ -70,7 +78,7 @@ func createEvent(context *gin.Context) {
 		return
 	}
 
-	event.UserID = 1
+	event.UserID = userId
 	context.JSON(http.StatusCreated, gin.H{
 		"message": "Event Created!",
 		"event":   event,
@@ -155,4 +163,20 @@ func updateEvent(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{
 		"message": "Event updated successfully",
 	})
+}
+
+func validateJWT(token string) (int64, error) {
+
+	if token == "" {
+		fmt.Println("Missing authorization token")
+		return 0, errors.New("Missing authorization token")
+	}
+
+	userId, err := utils.ValidateJWTToken(token)
+	if err != nil {
+		fmt.Println("Invalid or expired authorization token")
+		return 0, err
+	}
+
+	return userId, nil
 }
