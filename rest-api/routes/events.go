@@ -47,20 +47,8 @@ func getEvent(context *gin.Context) {
 
 func createEvent(context *gin.Context) {
 
-	token := context.Request.Header.Get("Authorization")
-
-	userId, err := validateJWT(token)
-
-	if err != nil {
-		context.JSON(http.StatusUnauthorized, gin.H{
-			"message": err.Error(),
-			"code":    "REAPI401",
-		})
-		return
-	}
-
 	var event models.Event
-	err = context.ShouldBindJSON(&event)
+	err := context.ShouldBindJSON(&event)
 
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
@@ -78,6 +66,7 @@ func createEvent(context *gin.Context) {
 		return
 	}
 
+	userId := context.GetInt64("userId")
 	event.UserID = userId
 	context.JSON(http.StatusCreated, gin.H{
 		"message": "Event Created!",
@@ -135,6 +124,14 @@ func updateEvent(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Unable to retrieve event by Id",
 			"code":    "REAPI500",
+		})
+		return
+	}
+
+	if event.UserID != context.GetInt64("userId") {
+		context.JSON(http.StatusForbidden, gin.H{
+			"message": "You are not authorized to update this event.",
+			"code":    "REAPI403",
 		})
 		return
 	}
